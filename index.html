@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mythic Shop rotation history</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+  const SOURCE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQK2qBIRuj1cJa-TGyL7M_Bk3Nwm55bN5lIXbDPUWHO9nDhvaNIvT43RH6z2N8r3sV6naflAhy39Xbg/pub?gid=1449343610&single=true&output=csv';
+</script>
+<style>
+  :root {
+    --bg: #f5f2fa; --surface: #ffffff; --ink: #221a2e; --muted: #6d6380;
+    --line: #e2dbec; --accent: #7a3fd1; --accent-soft: #efe6fb; --tile: #ece6f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1422; --surface: #241c2f; --ink: #f1ebf8; --muted: #a89bbb;
+      --line: #3a2f49; --accent: #b78cff; --accent-soft: #33264a; --tile: #2e2440;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 "Atkinson Hyperlegible", system-ui, sans-serif; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 {
+    font-family: "Bricolage Grotesque", system-ui, sans-serif; font-weight: 800;
+    font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1; letter-spacing: -0.02em; margin: 0 0 8px;
+  }
+  .lede { color: var(--muted); margin: 0 0 20px; }
+  .bar { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 12px 0 14px; border-bottom: 1px solid var(--line); }
+  .row { display: flex; gap: 10px; }
+  input[type=search] {
+    flex: 1; min-width: 0; font: inherit; font-size: 1.3rem; padding: 12px 16px; border-radius: 14px;
+    border: 2px solid var(--line); background: var(--surface); color: var(--ink);
+  }
+  input[type=search]:focus, select:focus { outline: none; border-color: var(--accent); }
+  select { font: inherit; padding: 0 12px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .chip { font: inherit; font-size: .95rem; cursor: pointer; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+  .chip b { margin-left: 4px; }
+  .chip[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  h2 { font-family: "Bricolage Grotesque", system-ui, sans-serif; font-weight: 500; font-size: 1.5rem; margin: 32px 0 14px; }
+  h2 span { color: var(--muted); font-size: 1rem; margin-left: 8px; }
+  .status { color: var(--muted); }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+  .pic { position: relative; aspect-ratio: 1; overflow: hidden; background: var(--tile); display: grid; place-items: center; color: var(--muted); font-size: .85rem; }
+  /* Absolute so the art never contributes height — the square box stays square whatever the image's ratio is. */
+  .pic img { position: absolute; inset: 0; width: 100%; height: 100%; padding: 8px; object-fit: contain; display: block; }
+  .pic.cover img { padding: 0; object-fit: cover; }
+  .meta { padding: 8px 10px 10px; }
+  .name { font-weight: 700; font-size: .92rem; line-height: 1.25; }
+  .sub { color: var(--muted); font-size: .8rem; margin-top: 2px; }
+  .times { display: inline-block; margin-top: 6px; font-size: .8rem; font-weight: 700; padding: 1px 8px; border-radius: 6px; background: var(--accent-soft); }
+  details { margin-top: 6px; font-size: .8rem; color: var(--muted); }
+  summary { cursor: pointer; }
+  details ul { margin: 4px 0 0; padding-left: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Mythic Shop rotation history</h1>
+  <p class="lede" id="lede">Loading…</p>
+  <div class="bar">
+    <div class="row">
+      <input id="q" type="search" placeholder="Search by name" autocomplete="off" aria-label="Search by name">
+      <select id="sort" aria-label="Sort">
+        <option value="recent">Most recent</option>
+        <option value="times">Most appearances</option>
+        <option value="name">Name</option>
+      </select>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div id="results"></div>
+</div>
+
+<script>
+const norm = s => (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, '');
+const esc = s => (s ?? '').toString().replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const parseDay = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const fmt = s => /^\d{4}-\d{2}-\d{2}$/.test(s) ? parseDay(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : s;
+
+let items = [], latest = '', type = 'All';
+
+Papa.parse(SOURCE, {
+  download: true, header: true, skipEmptyLines: true,
+  complete: ({ data }) => build(data),
+  error: () => document.getElementById('lede').textContent = 'Couldn’t load the rotation data. Check that the “Rotations Matched” tab is published to the web as CSV and SOURCE points to it.',
+});
+
+function build(rows) {
+  const map = new Map();
+  rows.forEach(r => {
+    const k = norm(r.Name) + '|' + r.Type;
+    let it = map.get(k);
+    if (!it) map.set(k, it = { name: r.Name, type: r.Type, img: '', dates: [], max: 0 });
+    it.dates.push(r.Date);
+    it.max = Math.max(it.max, Number(r.Count) || 0);
+    if (!it.img && r['Image URL']) it.img = r['Image URL'];
+  });
+  items = [...map.values()].map(it => {
+    const dates = [...new Set(it.dates)].sort().reverse();
+    return { ...it, dates, times: Math.max(it.max, dates.length), last: dates[0], s: norm(it.name) };
+  });
+  latest = items.reduce((m, it) => it.last > m ? it.last : m, '');
+  const rotations = new Set(rows.map(r => r.Date)).size;
+  document.getElementById('lede').textContent =
+    `${items.length} unique items across ${rotations} rotations. Last update: ${fmt(latest)}.`;
+
+  const q = document.getElementById('q');
+  const params = new URLSearchParams(location.search);
+  q.value = params.get('q') || '';
+  let t;
+  q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(render, 120); });
+  document.getElementById('sort').onchange = render;
+  render();
+}
+
+function render() {
+  const raw = document.getElementById('q').value.trim();
+  const url = new URL(location); raw ? url.searchParams.set('q', raw) : url.searchParams.delete('q');
+  history.replaceState(null, '', url);
+
+  const terms = norm(raw).split(/\s+/).filter(Boolean);
+  const searching = terms.length > 0;
+  let pool = searching ? items.filter(it => terms.every(t => it.s.includes(t))) : items.filter(it => it.last === latest);
+
+  const types = ['All', ...new Set(items.map(it => it.type))];
+  const chips = document.getElementById('chips');
+  chips.innerHTML = types.map(ty => {
+    const n = ty === 'All' ? pool.length : pool.filter(it => it.type === ty).length;
+    return `<button class="chip" data-t="${esc(ty)}" aria-pressed="${ty === type}">${esc(ty)}<b>${n}</b></button>`;
+  }).join('');
+  chips.querySelectorAll('.chip').forEach(b => b.onclick = () => { type = b.dataset.t; render(); });
+
+  if (type !== 'All') pool = pool.filter(it => it.type === type);
+  const sort = document.getElementById('sort').value;
+  pool.sort(sort === 'times' ? (a, b) => b.times - a.times || a.name.localeCompare(b.name)
+          : sort === 'name' ? (a, b) => a.name.localeCompare(b.name)
+          : (a, b) => b.last.localeCompare(a.last) || a.name.localeCompare(b.name));
+
+  const heading = searching ? `Results for “${esc(raw)}”` : `Latest rotation, ${fmt(latest)}`;
+  const body = pool.length
+    ? `<div class="grid">${pool.map(card).join('')}</div>`
+    : `<p class="status">Nothing in the rotation history matches “${esc(raw)}”. Try part of a champion or skin line name.</p>`;
+  document.getElementById('results').innerHTML = `<h2>${heading}<span>${pool.length}</span></h2>${body}`;
+}
+
+function card(it) {
+  const isSkin = /skin/i.test(it.type) && !/chroma/i.test(it.type);
+  const pic = it.img
+    ? `<img src="${esc(it.img)}" alt="" loading="lazy" decoding="async">`
+    : 'No image yet';
+  const dates = it.dates.length > 1
+    ? `<details><summary>All ${it.dates.length} dates</summary><ul>${it.dates.map(d => `<li>${fmt(d)}</li>`).join('')}</ul></details>`
+    : '';
+  return `<div class="card">
+    <div class="pic${isSkin ? ' cover' : ''}">${pic}</div>
+    <div class="meta">
+      <div class="name">${esc(it.name)}</div>
+      <div class="sub">${esc(it.type)} · last seen ${fmt(it.last)}</div>
+      <span class="times">Seen ${it.times}×</span>
+      ${dates}
+    </div>
+  </div>`;
+}
+</script>
+</body>
+</html>
