@@ -32,11 +32,22 @@
   .lede { color: var(--muted); margin: 0 0 20px; }
   .bar { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 12px 0 14px; border-bottom: 1px solid var(--line); }
   .row { display: flex; gap: 10px; }
+  .search { position: relative; flex: 1; min-width: 0; display: flex; }
   input[type=search] {
-    flex: 1; min-width: 0; font: inherit; font-size: 1.3rem; padding: 12px 16px; border-radius: 14px;
+    flex: 1; min-width: 0; font: inherit; font-size: 1.3rem; padding: 12px 52px 12px 16px; border-radius: 14px;
     border: 2px solid var(--line); background: var(--surface); color: var(--ink);
   }
+  input[type=search]::-webkit-search-cancel-button { display: none; }
   input[type=search]:focus, select:focus { outline: none; border-color: var(--accent); }
+  .clear {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    width: 32px; height: 32px; border: 0; border-radius: 50%; cursor: pointer;
+    background: var(--accent-soft); color: var(--ink);
+    font: 400 1.4rem/1 "Atkinson Hyperlegible", system-ui, sans-serif;
+    display: grid; place-items: center; padding: 0 0 2px;
+  }
+  .clear:hover { background: var(--accent); color: #fff; }
+  .clear[hidden] { display: none; }
   select { font: inherit; padding: 0 12px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .chip { font: inherit; font-size: .95rem; cursor: pointer; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
@@ -67,7 +78,10 @@
   <p class="lede" id="lede">Loading…</p>
   <div class="bar">
     <div class="row">
-      <input id="q" type="search" placeholder="Search by name" autocomplete="off" aria-label="Search by name">
+      <div class="search">
+        <input id="q" type="search" placeholder="Search by name" autocomplete="off" aria-label="Search by name">
+        <button id="clear" class="clear" type="button" aria-label="Clear search" hidden>&times;</button>
+      </div>
       <select id="sort" aria-label="Sort">
         <option value="recent">Most recent</option>
         <option value="times">Most appearances</option>
@@ -113,10 +127,14 @@ function build(rows) {
     `${items.length} unique items across ${rotations} rotations. Last update: ${fmt(latest)}.`;
 
   const q = document.getElementById('q');
+  const clear = document.getElementById('clear');
   const params = new URLSearchParams(location.search);
   q.value = params.get('q') || '';
+  const syncClear = () => clear.hidden = !q.value;
+  syncClear();
   let t;
-  q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(render, 120); });
+  q.addEventListener('input', () => { syncClear(); clearTimeout(t); t = setTimeout(render, 120); });
+  clear.onclick = () => { q.value = ''; syncClear(); q.focus(); clearTimeout(t); render(); };
   document.getElementById('sort').onchange = render;
   render();
 }
@@ -128,26 +146,35 @@ function render() {
 
   const terms = norm(raw).split(/\s+/).filter(Boolean);
   const searching = terms.length > 0;
-  let pool = searching ? items.filter(it => terms.every(t => it.s.includes(t))) : items.filter(it => it.last === latest);
+  // With no search, a type chip means "every one of these, all rotations"; only the All chip
+  // stays scoped to the latest rotation, so it's labelled for what it actually shows.
+  const matches = searching ? items.filter(it => terms.every(t => it.s.includes(t))) : items;
+  const latestOnly = items.filter(it => it.last === latest);
 
   const types = ['All', ...new Set(items.map(it => it.type))];
   const chips = document.getElementById('chips');
   chips.innerHTML = types.map(ty => {
-    const n = ty === 'All' ? pool.length : pool.filter(it => it.type === ty).length;
-    return `<button class="chip" data-t="${esc(ty)}" aria-pressed="${ty === type}">${esc(ty)}<b>${n}</b></button>`;
+    const all = ty === 'All';
+    const n = all ? (searching ? matches.length : latestOnly.length) : matches.filter(it => it.type === ty).length;
+    const label = all && !searching ? 'Latest rotation' : ty;
+    return `<button class="chip" data-t="${esc(ty)}" aria-pressed="${ty === type}">${esc(label)}<b>${n}</b></button>`;
   }).join('');
   chips.querySelectorAll('.chip').forEach(b => b.onclick = () => { type = b.dataset.t; render(); });
 
-  if (type !== 'All') pool = pool.filter(it => it.type === type);
+  let pool = type === 'All'
+    ? (searching ? matches : latestOnly)
+    : matches.filter(it => it.type === type);
   const sort = document.getElementById('sort').value;
   pool.sort(sort === 'times' ? (a, b) => b.times - a.times || a.name.localeCompare(b.name)
           : sort === 'name' ? (a, b) => a.name.localeCompare(b.name)
           : (a, b) => b.last.localeCompare(a.last) || a.name.localeCompare(b.name));
 
-  const heading = searching ? `Results for “${esc(raw)}”` : `Latest rotation, ${fmt(latest)}`;
+  const heading = searching ? `Results for “${esc(raw)}”`
+                : type === 'All' ? `Latest rotation, ${fmt(latest)}`
+                : `Every ${esc(type)}`;
   const body = pool.length
     ? `<div class="grid">${pool.map(card).join('')}</div>`
-    : `<p class="status">Nothing in the rotation history matches “${esc(raw)}”. Try part of a champion or skin line name.</p>`;
+    : `<p class="status">Nothing in the rotation history matches “${esc(raw)}”${type === 'All' ? '' : ` under ${esc(type)}`}. Try part of a champion or skin line name.</p>`;
   document.getElementById('results').innerHTML = `<h2>${heading}<span>${pool.length}</span></h2>${body}`;
 }
 
