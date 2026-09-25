@@ -3,199 +3,608 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mythic Shop rotation history</title>
+<meta name="color-scheme" content="dark">
+<title>Mythic Shop history</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
   const SOURCE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQK2qBIRuj1cJa-TGyL7M_Bk3Nwm55bN5lIXbDPUWHO9nDhvaNIvT43RH6z2N8r3sV6naflAhy39Xbg/pub?gid=1449343610&single=true&output=csv';
 </script>
 <style>
+  /* ---------- Aurora tokens ---------- */
   :root {
-    --bg: #f5f2fa; --surface: #ffffff; --ink: #221a2e; --muted: #6d6380;
-    --line: #e2dbec; --accent: #7a3fd1; --accent-soft: #efe6fb; --tile: #ece6f5;
+    --bg: #07090f; --surface-100: #0d111a; --surface-200: #131927; --surface-300: #1a2233;
+    --border: #273047; --border-strong: #5a6685;
+    --ink: #eef2fa; --ink-muted: #a3aec6; --ink-subtle: #7c89a6; --on-accent: #04060b;
+    --cyan: #00e5ff; --blue: #4d7cff; --violet: #9b6bff; --mint: #19f5b8; --sky: #38c7ff;
+    --link: var(--cyan); --focus: var(--cyan); --danger: #ff5c7a; --danger-soft: #ff5c7a1f;
+    --hover-tint: #ffffff0d;
+    --font-sans: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-condensed: "Roboto Condensed", "Arial Narrow", Roboto, sans-serif;
+    --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 24px; --space-6: 32px; --space-7: 48px; --space-8: 64px;
+    --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px; --radius-pill: 999px;
+    --shadow-raised: 0 12px 40px -12px #000000cc;
+    --shadow-overlay: 0 24px 64px -16px #000000e6, 0 0 0 1px #273047;
+    --glow-cyan: 0 8px 28px -8px #00e5ff99;
+    --grad-aurora: linear-gradient(120deg, #00e5ff 0%, #4d7cff 50%, #9b6bff 100%);
+    --grad-aurora-flow: linear-gradient(120deg, #00e5ff 0%, #4d7cff 25%, #9b6bff 50%, #4d7cff 75%, #00e5ff 100%);
+    --grad-glow: radial-gradient(60% 80% at 0% 0%, #00e5ff26 0%, #00e5ff00 70%);
+    --flow-duration: 2.4s; --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #1a1422; --surface: #241c2f; --ink: #f1ebf8; --muted: #a89bbb;
-      --line: #3a2f49; --accent: #b78cff; --accent-soft: #33264a; --tile: #2e2440;
-    }
+
+  /* ---------- Base ---------- */
+  *, *::before, *::after { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/24px var(--font-sans); -webkit-font-smoothing: antialiased;
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 "Atkinson Hyperlegible", system-ui, sans-serif; }
-  .wrap { max-width: 1200px; margin: 0 auto; padding: 32px 20px 80px; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  .hero { background-image: var(--grad-glow); }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 var(--space-5); }
+  header.wrap { padding-top: var(--space-7); padding-bottom: var(--space-5); }
+  .overline {
+    font: 600 12px/16px var(--font-condensed); letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-muted); margin: 0 0 var(--space-2);
+  }
   h1 {
-    font-family: "Bricolage Grotesque", system-ui, sans-serif; font-weight: 800;
-    font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1; letter-spacing: -0.02em; margin: 0 0 8px;
+    font: 800 clamp(40px, 7vw, 72px)/.95 var(--font-condensed); letter-spacing: -.01em;
+    margin: 0 0 var(--space-3);
   }
-  .lede { color: var(--muted); margin: 0 0 20px; }
-  .bar { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 12px 0 14px; border-bottom: 1px solid var(--line); }
-  .row { display: flex; gap: 10px; }
-  .search { position: relative; flex: 1; min-width: 0; display: flex; }
-  input[type=search] {
-    flex: 1; min-width: 0; font: inherit; font-size: 1.3rem; padding: 12px 52px 12px 16px; border-radius: 14px;
-    border: 2px solid var(--line); background: var(--surface); color: var(--ink);
+  .text-gradient { background: var(--grad-aurora); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+  .lede { font-size: 18px; line-height: 28px; font-weight: 300; color: var(--ink-muted); margin: 0; }
+  .lede b { font-weight: 500; color: var(--ink); }
+  .top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-5); }
+  .faq-btn { flex: none; margin-top: var(--space-2); }
+
+  /* ---------- FAQ dialog ---------- */
+  dialog.faq { width: min(680px, calc(100vw - 32px)); }
+  .faq-head { padding: var(--space-6) var(--space-6) var(--space-3); }
+  .faq-head h3 { font: 700 28px/1.15 var(--font-condensed); margin: 0; padding-right: 40px; }
+  .faq-list { overflow-y: auto; min-height: 0; padding: 0 var(--space-6) var(--space-6); }
+  .faq-list details { border-top: 1px solid var(--border); }
+  .faq-list details:last-child { border-bottom: 1px solid var(--border); }
+  .faq-list summary {
+    list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: var(--space-3);
+    padding: var(--space-4) var(--space-1); font-weight: 500; font-size: 16px; line-height: 24px; border-radius: var(--radius-sm);
   }
-  input[type=search]::-webkit-search-cancel-button { display: none; }
-  input[type=search]:focus, select:focus { outline: none; border-color: var(--accent); }
+  .faq-list summary::-webkit-details-marker { display: none; }
+  .faq-list summary:hover { background: var(--hover-tint); }
+  .faq-list summary svg { flex: none; color: var(--ink-muted); transition: transform .2s var(--ease-out); }
+  .faq-list details[open] summary svg { transform: rotate(180deg); }
+  .faq-list .a { padding: 0 var(--space-1) var(--space-4); color: var(--ink-muted); font-size: 15px; line-height: 24px; }
+  .faq-list .a p { margin: 0 0 var(--space-3); } .faq-list .a p:last-child { margin: 0; }
+  .faq-list .a b { color: var(--ink); font-weight: 500; }
+  @media (max-width: 600px) { .faq-head { padding: var(--space-5) var(--space-4) var(--space-3); } .faq-list { padding: 0 var(--space-4) var(--space-4); } }
+  .section-head { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; margin: var(--space-6) 0 var(--space-3); }
+  .results-head + .section-head { margin-top: 0; }
+  h3.sec { font: 600 22px/1.2 var(--font-condensed); margin: 0; }
+  .cadence { color: var(--ink-subtle); font-size: 13px; }
+
+  /* ---------- Sticky filter bar ---------- */
+  .bar {
+    position: sticky; top: 0; z-index: 5;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .bar .wrap { padding-top: var(--space-4); padding-bottom: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .controls { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; }
+  .search { position: relative; flex: 1 1 320px; min-width: 0; }
+  .search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-muted); pointer-events: none; }
+  .input, .select {
+    min-height: 48px; font: inherit; font-size: 16px; color: var(--ink);
+    background: var(--surface-100); border: 1px solid var(--border-strong); border-radius: var(--radius-md);
+    transition: border-color .2s var(--ease-out), box-shadow .2s var(--ease-out);
+  }
+  .input { width: 100%; padding: 10px 88px 10px 44px; font-size: 17px; }
+  .input::placeholder { color: var(--ink-subtle); }
+  .input::-webkit-search-cancel-button { display: none; }
+  .input:hover, .select:hover { border-color: var(--ink-subtle); }
+  .input:focus, .select:focus {
+    outline: none; border-color: transparent;
+    background: linear-gradient(var(--surface-100), var(--surface-100)) padding-box, var(--grad-aurora) border-box;
+    box-shadow: var(--glow-cyan);
+  }
+  .select {
+    appearance: none; padding: 0 40px 0 var(--space-3); cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, var(--ink-muted) 50%), linear-gradient(135deg, var(--ink-muted) 50%, transparent 50%);
+    background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%; background-size: 5px 5px; background-repeat: no-repeat;
+  }
+  .select:focus { background: linear-gradient(var(--surface-100), var(--surface-100)) padding-box, var(--grad-aurora) border-box; }
+  .sort { display: flex; align-items: center; gap: var(--space-2); color: var(--ink-muted); font-size: 14px; }
+  .kbd {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    font: 500 12px/1 var(--font-sans); color: var(--ink-subtle);
+    border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px 7px; pointer-events: none;
+  }
   .clear {
-    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-    width: 32px; height: 32px; border: 0; border-radius: 50%; cursor: pointer;
-    background: var(--accent-soft); color: var(--ink);
-    font: 400 1.4rem/1 "Atkinson Hyperlegible", system-ui, sans-serif;
-    display: grid; place-items: center; padding: 0 0 2px;
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: 36px; height: 36px; border: 0; border-radius: var(--radius-sm); cursor: pointer;
+    background: none; color: var(--ink-muted); display: grid; place-items: center;
   }
-  .clear:hover { background: var(--accent); color: #fff; }
-  .clear[hidden] { display: none; }
-  select { font: inherit; padding: 0 12px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-  .chip { font: inherit; font-size: .95rem; cursor: pointer; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
-  .chip b { margin-left: 4px; }
-  .chip[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-  h2 { font-family: "Bricolage Grotesque", system-ui, sans-serif; font-weight: 500; font-size: 1.5rem; margin: 32px 0 14px; }
-  h2 span { color: var(--muted); font-size: 1rem; margin-left: 8px; }
-  .status { color: var(--muted); }
-  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
-  .pic { position: relative; aspect-ratio: 1; overflow: hidden; background: var(--tile); display: grid; place-items: center; color: var(--muted); font-size: .85rem; }
-  /* Absolute so the art never contributes height — the square box stays square whatever the image's ratio is. */
-  .pic img { position: absolute; inset: 0; width: 100%; height: 100%; padding: 8px; object-fit: contain; display: block; }
+  .clear:hover { background: var(--hover-tint); color: var(--ink); }
+  .clear[hidden], .kbd[hidden] { display: none; }
+
+  .filters { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: center; }
+  .pills { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface-100); border: 1px solid var(--border); border-radius: var(--radius-pill); }
+  .tab {
+    padding: 6px 16px; min-height: 36px; border: 0; border-radius: var(--radius-pill); cursor: pointer;
+    background: none; color: var(--ink-muted); font: 500 15px/20px var(--font-sans); white-space: nowrap;
+  }
+  .tab:hover { color: var(--ink); background: var(--hover-tint); }
+  .tab[aria-pressed=true] { background: var(--grad-aurora); color: var(--on-accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .chip {
+    display: inline-flex; align-items: center; gap: var(--space-2);
+    min-height: 36px; padding: 6px 14px; border-radius: var(--radius-pill); cursor: pointer;
+    font: 500 14px/20px var(--font-sans); color: var(--ink-muted);
+    background: transparent; border: 1px solid var(--border-strong);
+  }
+  .chip:hover { color: var(--ink); background: var(--hover-tint); }
+  .chip .n { font-size: 12px; font-weight: 600; color: var(--ink-subtle); }
+  .chip[aria-pressed=true] { color: var(--ink); border-color: var(--cyan); background: #00e5ff14; }
+  .chip[aria-pressed=true] .n { color: var(--cyan); }
+  .chip:disabled { opacity: .4; cursor: default; }
+
+  /* ---------- Results ---------- */
+  main.wrap { padding-bottom: var(--space-8); }
+  .results-head { display: flex; align-items: baseline; gap: var(--space-3); flex-wrap: wrap; margin: var(--space-6) 0 var(--space-4); }
+  h2 { font: 700 28px/1.15 var(--font-condensed); margin: 0; }
+  .count { color: var(--ink-muted); font-size: 14px; }
+  .status { color: var(--ink-muted); }
+  .loading { display: flex; align-items: center; gap: var(--space-3); color: var(--ink-muted); padding: var(--space-7) 0; }
+  .spinner {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: conic-gradient(from 0deg, #00e5ff00, var(--cyan), var(--blue), var(--violet));
+    -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 3px), #000 calc(100% - 3px));
+    mask: radial-gradient(farthest-side, #0000 calc(100% - 3px), #000 calc(100% - 3px));
+    animation: spin .9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(1turn); } }
+  .alert {
+    display: flex; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-md);
+    background: var(--danger-soft); border: 1px solid #ff5c7a55; font-size: 14px; line-height: 20px; margin-top: var(--space-6);
+  }
+  .alert b { display: block; color: var(--danger); margin-bottom: 2px; }
+  .alert-icon { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--on-accent); background: var(--danger); }
+
+  .grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); }
+  /* The whole card is one button; details open in a dialog, so nothing inside a card
+     ever changes size and a grid row can never grow when someone checks the dates. */
+  .card {
+    position: relative; display: flex; flex-direction: column; text-align: left; padding: 0; width: 100%;
+    font: inherit; color: inherit; cursor: pointer;
+    background: var(--surface-200); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden;
+    transition: transform .25s var(--ease-out), box-shadow .25s var(--ease-out), border-color .25s var(--ease-out);
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-raised); border-color: var(--border-strong); }
+  .card:focus-visible { outline-offset: 3px; }
+  .pic { position: relative; display: grid; place-items: center; aspect-ratio: 1; overflow: hidden; background: var(--surface-100); color: var(--ink-subtle); font-size: 13px; }
+  .pic img { position: absolute; inset: 0; width: 100%; height: 100%; padding: 10px; object-fit: contain; display: block; }
   .pic.cover img { padding: 0; object-fit: cover; }
-  .meta { padding: 8px 10px 10px; }
-  .name { font-weight: 700; font-size: .92rem; line-height: 1.25; }
-  .sub { color: var(--muted); font-size: .8rem; margin-top: 2px; }
-  .times { display: inline-block; margin-top: 6px; font-size: .8rem; font-weight: 700; padding: 1px 8px; border-radius: 6px; background: var(--accent-soft); }
-  details { margin-top: 6px; font-size: .8rem; color: var(--muted); }
-  summary { cursor: pointer; }
-  details ul { margin: 4px 0 0; padding-left: 18px; }
+  .flag {
+    position: absolute; top: 8px; left: 8px; z-index: 1;
+    padding: 2px 10px; font-size: 12px; line-height: 18px; font-weight: 600; letter-spacing: .02em;
+    border-radius: var(--radius-pill); color: var(--on-accent); background: var(--grad-aurora);
+  }
+  .flag.first { background: linear-gradient(120deg, #19f5b8 0%, #00e5ff 50%, #38c7ff 100%); }
+  .meta { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: var(--space-3) var(--space-3) var(--space-3); }
+  .name { font-weight: 500; font-size: 15px; line-height: 20px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .type { color: var(--ink-muted); font-size: 13px; line-height: 18px; }
+  .foot { margin-top: auto; padding-top: var(--space-2); display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font-size: 13px; line-height: 18px; color: var(--ink-muted); }
+  .times { flex: none; padding: 1px 8px; border-radius: var(--radius-pill); background: var(--surface-300); color: var(--ink); font-weight: 600; font-size: 12px; }
+  .more { display: flex; justify-content: center; margin-top: var(--space-6); }
+  .btn {
+    position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+    min-height: 44px; padding: 10px 20px; border: 0; border-radius: var(--radius-md); cursor: pointer; isolation: isolate;
+    font: 500 15px/20px var(--font-sans); letter-spacing: .01em; color: var(--ink); background: transparent;
+    transition: transform .2s var(--ease-out), background-color .2s var(--ease-out);
+  }
+  .btn-secondary::before {
+    content: ""; position: absolute; inset: 0; padding: 2px; border-radius: inherit; z-index: -1;
+    background: var(--grad-aurora-flow); background-size: 200% 100%;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  }
+  .btn-secondary:hover { background-color: var(--hover-tint); transform: translateY(-1px); }
+  .btn-secondary:hover::before { animation: flow var(--flow-duration) ease-in-out infinite alternate; }
+  @keyframes flow { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+
+  /* ---------- Detail dialog ---------- */
+  dialog.modal {
+    width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0; border: 0;
+    color: var(--ink); background: var(--surface-300); border-radius: var(--radius-lg); box-shadow: var(--shadow-overlay);
+    overflow: hidden;
+  }
+  dialog.modal[open] { display: flex; flex-direction: column; }
+  dialog.modal::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--grad-aurora); z-index: 1; }
+  dialog.modal::backdrop { background: #03050acc; backdrop-filter: blur(6px); }
+  .m-top { display: grid; grid-template-columns: 200px 1fr; gap: var(--space-5); padding: var(--space-6) var(--space-6) var(--space-5); }
+  .m-top .pic { border-radius: var(--radius-md); border: 1px solid var(--border); }
+  .m-head { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+  .m-head h3 { font: 700 28px/1.15 var(--font-condensed); margin: 0; padding-right: 40px; }
+  .m-type { color: var(--ink-muted); font-size: 14px; }
+  .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); margin: var(--space-2) 0 0; }
+  .stat { background: var(--surface-200); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); }
+  .stat dt { font: 600 11px/16px var(--font-condensed); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-muted); }
+  .stat dd { margin: 0; font-weight: 500; font-size: 15px; line-height: 20px; }
+  .stat dd small { display: block; color: var(--ink-muted); font-weight: 400; font-size: 13px; }
+  .m-close {
+    position: absolute; top: 16px; right: 16px; z-index: 2; width: 40px; height: 40px; border: 0; border-radius: var(--radius-sm);
+    background: none; color: var(--ink-muted); cursor: pointer; display: grid; place-items: center;
+  }
+  .m-close:hover { background: var(--hover-tint); color: var(--ink); }
+  .m-dates { border-top: 1px solid var(--border); padding: var(--space-4) var(--space-6) var(--space-6); overflow-y: auto; min-height: 0; }
+  .m-dates h4 { font: 600 12px/16px var(--font-condensed); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-muted); margin: var(--space-4) 0 var(--space-2); }
+  .m-dates h4:first-child { margin-top: 0; }
+  .m-dates ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .m-dates li { padding: 4px 10px; border-radius: var(--radius-sm); background: var(--surface-200); border: 1px solid var(--border); font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums; }
+  .m-dates li.latest { border-color: var(--cyan); color: var(--cyan); }
+  .m-note { color: var(--ink-subtle); font-size: 13px; margin: var(--space-3) 0 0; }
+
+  @media (max-width: 600px) {
+    header.wrap { padding-top: var(--space-6); }
+    .m-top { grid-template-columns: 1fr; padding: var(--space-5) var(--space-4) var(--space-4); }
+    .m-top .pic { width: 160px; }
+    .m-dates { padding: var(--space-4); }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: var(--space-3); }
+    .kbd { display: none; }
+    .sort { flex: 1 1 100%; } .sort .select { flex: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card:hover, .btn:hover { transform: none; }
+    .btn-secondary:hover::before, .spinner { animation: none; }
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Mythic Shop rotation history</h1>
-  <p class="lede" id="lede">Loading…</p>
-  <div class="bar">
-    <div class="row">
-      <div class="search">
-        <input id="q" type="search" placeholder="Search by name" autocomplete="off" aria-label="Search by name">
-        <button id="clear" class="clear" type="button" aria-label="Clear search" hidden>&times;</button>
-      </div>
-      <select id="sort" aria-label="Sort">
-        <option value="recent">Most recent</option>
-        <option value="times">Most appearances</option>
-        <option value="name">Name</option>
-      </select>
+<div class="hero">
+  <header class="wrap top">
+    <div>
+      <h1>MYTHIC <span class="text-gradient">SHOP</span></h1>
+      <p class="lede" id="lede">Loading the rotation log…</p>
     </div>
-    <div class="chips" id="chips"></div>
-  </div>
-  <div id="results"></div>
+    <button class="btn btn-secondary faq-btn" type="button" id="faq-open" aria-haspopup="dialog">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2.1-2.4 3.6"/><path d="M12 17h.01"/></svg>
+      FAQ
+    </button>
+  </header>
 </div>
 
-<script>
-const norm = s => (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, '');
-const esc = s => (s ?? '').toString().replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const parseDay = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
-const fmt = s => /^\d{4}-\d{2}-\d{2}$/.test(s) ? parseDay(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : s;
+<div class="bar">
+  <div class="wrap">
+    <div class="controls">
+      <div class="search">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <label for="q" class="sr-only">Search by name</label>
+        <input id="q" class="input" type="search" placeholder="Search a champion, skin line or item" autocomplete="off" spellcheck="false">
+        <span class="kbd" id="kbd" aria-hidden="true">/</span>
+        <button id="clear" class="clear" type="button" aria-label="Clear search" hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <label class="sort">Sort
+        <select id="sort" class="select">
+          <option value="recent">Most recent</option>
+          <option value="times">Most appearances</option>
+          <option value="absent">Longest since seen</option>
+          <option value="name">Name A–Z</option>
+        </select>
+      </label>
+    </div>
+    <div class="filters">
+      <div class="pills" role="group" aria-label="Which rotations">
+        <button class="tab" type="button" data-scope="latest">Newest drops</button>
+        <button class="tab" type="button" data-scope="all">All history</button>
+      </div>
+      <div class="chips" id="chips" role="group" aria-label="Item type"></div>
+    </div>
+  </div>
+</div>
 
-let items = [], latest = '', type = 'All';
+<main class="wrap">
+  <div id="results" aria-live="polite">
+    <div class="loading"><div class="spinner" aria-hidden="true"></div>Loading rotations…</div>
+  </div>
+</main>
+
+<dialog class="modal" id="detail" aria-labelledby="d-name">
+  <button class="m-close" type="button" aria-label="Close" data-close>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+  </button>
+  <div id="d-body" style="display:contents"></div>
+</dialog>
+
+<dialog class="modal faq" id="faq" aria-labelledby="faq-title">
+  <button class="m-close" type="button" aria-label="Close" data-close>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+  </button>
+  <div class="faq-head"><h3 id="faq-title">FAQ</h3></div>
+  <div class="faq-list">
+    <details>
+      <summary>When did this start?<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+      <div class="a">
+        <p>I started recording these the day the new <strong>random</strong> mythic shop began: March 19, 2025. Previous Mythic Shop rotations were chosen by Riot and not randomized.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Does this include the "Featured" section of the Mythic Shop?<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+      <div class="a">
+        <p><strong>No</strong>, and they don't share the same pool. The featured section is more likely to include newer releases, while the skins and chromas in the random pool are very rarely updated. There was a confirmed update of the random pool in September 2026, where we began to see prestige skin chromas from 2025 and prestige skins from 2026.</p>
+      </div>
+    </details>
+    <details>
+      <summary>Is this the entire random pool?<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+      <div class="a">
+        <p><strong>No</strong>, because it's random we still occasionally see new things pop up. Riot also updates the pool rarely. The newest confirmed items are icons/emotes from Season 1 2026 (Demacia), chromas for prestige skins from 2025, and prestige skins from 2026 (Prestige Veiled Lady Morgana.)</p>
+        <p>There are also some items I'm fairly certain Riot skipped over and are not in the pool until proven otherwise, like loot chromas and chroma icons for Fright Night skins.</p>
+      </div>
+    </details>
+  </div>
+</dialog>
+
+<script>
+const norm = s => (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, '');
+const esc = s => (s ?? '').toString().replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const isISO = s => /^\d{4}-\d{2}-\d{2}$/.test(s);
+const parseDay = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const fmt = (s, opts = { month: 'short', day: 'numeric', year: 'numeric' }) => isISO(s) ? parseDay(s).toLocaleDateString('en-US', opts) : s;
+const DAY = 864e5;
+const today = new Date(); today.setHours(0, 0, 0, 0);
+const daysSince = s => isISO(s) ? Math.round((today - parseDay(s)) / DAY) : null;
+const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+const ago = s => {
+  const d = daysSince(s); if (d == null) return '';
+  if (d < 14) return rtf.format(-d, 'day');
+  if (d < 60) return rtf.format(-Math.round(d / 7), 'week');
+  if (d < 730) return rtf.format(-Math.round(d / 30.44), 'month');
+  return rtf.format(-Math.round(d / 365.25), 'year');
+};
+const isSkin = t => /skin/i.test(t) && !/chroma/i.test(t);
+const PAGE = 120;
+// The shop has three slots that refresh on their own schedules, so "newest" is judged per slot.
+// The sheet only logs when something enters, and Riot's timing slips, so the page never claims
+// an item is still in the shop — only that it came in with the most recent drop for its slot.
+const GROUPS = [
+  { id: 'skin', label: 'Skins', cadence: 'usually rotate every 2 weeks' },
+  { id: 'chroma', label: 'Chromas', cadence: 'usually rotate weekly' },
+  { id: 'daily', label: 'Daily items', cadence: 'usually rotate daily' },
+];
+const groupOf = t => /chroma/i.test(t) ? 'chroma' : isSkin(t) ? 'skin' : 'daily';
+const latestBy = {};
+
+const $ = id => document.getElementById(id);
+const q = $('q'), clear = $('clear'), kbd = $('kbd'), sortSel = $('sort'), dialog = $('detail');
+const params = new URLSearchParams(location.search);
+let items = [], byKey = new Map(), latest = '', rotations = 0;
+let state = {
+  scope: params.get('scope') === 'all' ? 'all' : 'latest',
+  type: params.get('type') || 'All',
+  sort: params.get('sort') || 'recent',
+  shown: PAGE,
+};
+let scopeBeforeSearch = null;
 
 Papa.parse(SOURCE, {
   download: true, header: true, skipEmptyLines: true,
   complete: ({ data }) => build(data),
-  error: () => document.getElementById('lede').textContent = 'Couldn’t load the rotation data. Check that the “Rotations Matched” tab is published to the web as CSV and SOURCE points to it.',
+  error: () => {
+    $('lede').textContent = 'The rotation log didn’t load.';
+    $('results').innerHTML = `<div class="alert" role="alert"><span class="alert-icon" aria-hidden="true">!</span><div><b>Couldn’t load the rotation data</b>Check that the “Rotations Matched” tab is published to the web as CSV and that SOURCE points to it, then reload.</div></div>`;
+  },
 });
 
 function build(rows) {
   const map = new Map();
   rows.forEach(r => {
+    if (!r.Name) return;
     const k = norm(r.Name) + '|' + r.Type;
     let it = map.get(k);
-    if (!it) map.set(k, it = { name: r.Name, type: r.Type, img: '', dates: [], max: 0 });
-    it.dates.push(r.Date);
+    if (!it) map.set(k, it = { key: k, name: r.Name, type: r.Type, img: '', dates: [], max: 0 });
+    if (r.Date) it.dates.push(r.Date);
     it.max = Math.max(it.max, Number(r.Count) || 0);
     if (!it.img && r['Image URL']) it.img = r['Image URL'];
   });
   items = [...map.values()].map(it => {
     const dates = [...new Set(it.dates)].sort().reverse();
-    return { ...it, dates, times: Math.max(it.max, dates.length), last: dates[0], s: norm(it.name) };
+    return { ...it, dates, times: Math.max(it.max, dates.length), last: dates[0] || '', first: dates[dates.length - 1] || '', s: norm(it.name) };
   });
+  items.forEach(it => { byKey.set(it.key, it); it.group = groupOf(it.type); });
   latest = items.reduce((m, it) => it.last > m ? it.last : m, '');
-  const rotations = new Set(rows.map(r => r.Date)).size;
-  document.getElementById('lede').textContent =
-    `${items.length} unique items across ${rotations} rotations. Last update: ${fmt(latest)}.`;
+  items.forEach(it => { if (it.last > (latestBy[it.group] || '')) latestBy[it.group] = it.last; });
+  items.forEach(it => it.current = !!it.last && it.last === latestBy[it.group]);
+  // Name the daily slot after what's actually in it (e.g. "Icons, emotes & wards").
+  const dailyTypes = [...new Set(items.filter(it => it.group === 'daily').map(it => it.type))].sort();
+  if (dailyTypes.length) {
+    const pl = dailyTypes.map(t => /s$/i.test(t) ? t : t + 's');
+    GROUPS[2].label = pl.length > 1 ? pl.slice(0, -1).join(', ') + ' & ' + pl.at(-1).toLowerCase() : pl[0];
+    GROUPS[2].label = GROUPS[2].label[0].toUpperCase() + GROUPS[2].label.slice(1).toLowerCase();
+  }
+  rotations = new Set(rows.map(r => r.Date).filter(Boolean)).size;
+  $('lede').innerHTML = `<b>${items.length.toLocaleString()}</b> unique items logged across <b>${rotations}</b> shop updates. Updated: <b>${esc(fmt(latest))}</b>.`;
 
-  const q = document.getElementById('q');
-  const clear = document.getElementById('clear');
-  const params = new URLSearchParams(location.search);
   q.value = params.get('q') || '';
-  const syncClear = () => clear.hidden = !q.value;
+  if (q.value) { scopeBeforeSearch = state.scope; state.scope = params.get('scope') === 'latest' ? 'latest' : 'all'; }
+  sortSel.value = [...sortSel.options].some(o => o.value === state.sort) ? state.sort : 'recent';
   syncClear();
+
   let t;
-  q.addEventListener('input', () => { syncClear(); clearTimeout(t); t = setTimeout(render, 120); });
-  clear.onclick = () => { q.value = ''; syncClear(); q.focus(); clearTimeout(t); render(); };
-  document.getElementById('sort').onchange = render;
+  q.addEventListener('input', () => {
+    // Searching means "find it anywhere in the log"; clearing the box puts the view back.
+    if (q.value.trim() && scopeBeforeSearch === null) { scopeBeforeSearch = state.scope; state.scope = 'all'; }
+    if (!q.value.trim() && scopeBeforeSearch !== null) { state.scope = scopeBeforeSearch; scopeBeforeSearch = null; }
+    syncClear(); state.shown = PAGE; clearTimeout(t); t = setTimeout(render, 120);
+  });
+  q.addEventListener('keydown', e => { if (e.key === 'Escape' && q.value) { e.preventDefault(); clearSearch(); } });
+  clear.onclick = () => { clearSearch(); q.focus(); };
+  sortSel.onchange = () => { state.sort = sortSel.value; state.shown = PAGE; render(); };
+  document.querySelectorAll('[data-scope]').forEach(b => b.onclick = () => {
+    state.scope = b.dataset.scope; state.shown = PAGE;
+    if (scopeBeforeSearch !== null) scopeBeforeSearch = state.scope;
+    render();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && !document.querySelector('dialog[open]') && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); q.focus(); q.select(); }
+  });
   render();
+  const open = params.get('item');
+  if (open && byKey.has(open)) showDetail(byKey.get(open), false);
 }
 
-function render() {
-  const raw = document.getElementById('q').value.trim();
-  const url = new URL(location); raw ? url.searchParams.set('q', raw) : url.searchParams.delete('q');
+function clearSearch() {
+  q.value = '';
+  if (scopeBeforeSearch !== null) { state.scope = scopeBeforeSearch; scopeBeforeSearch = null; }
+  syncClear(); state.shown = PAGE; render();
+}
+function syncClear() { clear.hidden = !q.value; kbd.hidden = !!q.value; }
+
+function syncURL() {
+  const url = new URL(location);
+  const set = (k, v, dflt) => v && v !== dflt ? url.searchParams.set(k, v) : url.searchParams.delete(k);
+  set('q', q.value.trim(), '');
+  set('scope', q.value.trim() ? (state.scope === 'latest' ? 'latest' : '') : state.scope, q.value.trim() ? '' : 'latest');
+  set('type', state.type, 'All');
+  set('sort', state.sort, 'recent');
+  set('item', dialog.open ? dialog.dataset.key : '', '');
   history.replaceState(null, '', url);
+}
 
+const sorters = {
+  recent: (a, b) => b.last.localeCompare(a.last) || a.name.localeCompare(b.name),
+  times: (a, b) => b.times - a.times || b.last.localeCompare(a.last) || a.name.localeCompare(b.name),
+  absent: (a, b) => a.last.localeCompare(b.last) || a.name.localeCompare(b.name),
+  name: (a, b) => a.name.localeCompare(b.name),
+};
+
+function render() {
+  const raw = q.value.trim();
   const terms = norm(raw).split(/\s+/).filter(Boolean);
-  const searching = terms.length > 0;
-  // With no search, a type chip means "every one of these, all rotations"; only the All chip
-  // stays scoped to the latest rotation, so it's labelled for what it actually shows.
-  const matches = searching ? items.filter(it => terms.every(t => it.s.includes(t))) : items;
-  const latestOnly = items.filter(it => it.last === latest);
+  const inScope = state.scope === 'latest' ? items.filter(it => it.current) : items;
+  const matches = terms.length ? inScope.filter(it => terms.every(t => it.s.includes(t))) : inScope;
 
-  const types = ['All', ...new Set(items.map(it => it.type))];
-  const chips = document.getElementById('chips');
-  chips.innerHTML = types.map(ty => {
-    const all = ty === 'All';
-    const n = all ? (searching ? matches.length : latestOnly.length) : matches.filter(it => it.type === ty).length;
-    const label = all && !searching ? 'Latest rotation' : ty;
-    return `<button class="chip" data-t="${esc(ty)}" aria-pressed="${ty === type}">${esc(label)}<b>${n}</b></button>`;
+  document.querySelectorAll('[data-scope]').forEach(b => b.setAttribute('aria-pressed', b.dataset.scope === state.scope));
+
+  const types = [...new Set(items.map(it => it.type))].sort();
+  if (state.type !== 'All' && !types.includes(state.type)) state.type = 'All';
+  const counts = {}; matches.forEach(it => counts[it.type] = (counts[it.type] || 0) + 1);
+  $('chips').innerHTML = ['All', ...types].map(ty => {
+    const n = ty === 'All' ? matches.length : (counts[ty] || 0);
+    const on = ty === state.type;
+    return `<button class="chip" type="button" data-t="${esc(ty)}" aria-pressed="${on}"${!n && !on ? ' disabled' : ''}>${ty === 'All' ? 'All types' : esc(ty)}<span class="n">${n}</span></button>`;
   }).join('');
-  chips.querySelectorAll('.chip').forEach(b => b.onclick = () => { type = b.dataset.t; render(); });
+  $('chips').querySelectorAll('.chip').forEach(b => b.onclick = () => { state.type = b.dataset.t; state.shown = PAGE; render(); });
 
-  let pool = type === 'All'
-    ? (searching ? matches : latestOnly)
-    : matches.filter(it => it.type === type);
-  const sort = document.getElementById('sort').value;
-  pool.sort(sort === 'times' ? (a, b) => b.times - a.times || a.name.localeCompare(b.name)
-          : sort === 'name' ? (a, b) => a.name.localeCompare(b.name)
-          : (a, b) => b.last.localeCompare(a.last) || a.name.localeCompare(b.name));
+  const pool = (state.type === 'All' ? matches : matches.filter(it => it.type === state.type)).sort(sorters[state.sort] || sorters.recent);
 
-  const heading = searching ? `Results for “${esc(raw)}”`
-                : type === 'All' ? `Latest rotation, ${fmt(latest)}`
-                : `Every ${esc(type)}`;
+  const typeLabel = state.type === 'All' ? '' : ` · ${esc(state.type)}`;
+  const heading = raw ? `Results for “${esc(raw)}”${typeLabel}`
+    : state.scope === 'latest' ? `Newest drops${typeLabel}`
+    : `All history${typeLabel}`;
+  const scopeNote = raw && state.scope === 'latest' ? ' in the newest drops' : '';
+  const shown = state.scope === 'latest' ? pool : pool.slice(0, state.shown);
+  // Newest drops are split by shop slot, since each slot refreshed on its own date.
+  const grid = state.scope === 'latest'
+    ? GROUPS.map(g => {
+        const its = shown.filter(it => it.group === g.id);
+        return its.length ? `<div class="section-head"><h3 class="sec">${esc(g.label)}</h3><span class="count">entered ${esc(fmt(latestBy[g.id]))}</span></div><div class="grid">${its.map(card).join('')}</div>` : '';
+      }).join('')
+    : `<div class="grid">${shown.map(card).join('')}</div>`;
   const body = pool.length
-    ? `<div class="grid">${pool.map(card).join('')}</div>`
-    : `<p class="status">Nothing in the rotation history matches “${esc(raw)}”${type === 'All' ? '' : ` under ${esc(type)}`}. Try part of a champion or skin line name.</p>`;
-  document.getElementById('results').innerHTML = `<h2>${heading}<span>${pool.length}</span></h2>${body}`;
+    ? grid +
+      (pool.length > shown.length ? `<div class="more"><button class="btn btn-secondary" type="button" id="more">Show ${Math.min(PAGE, pool.length - shown.length)} more <span class="count">(${shown.length} of ${pool.length})</span></button></div>` : '')
+    : `<p class="status">Nothing${scopeNote} matches${raw ? ` “${esc(raw)}”` : ''}${state.type === 'All' ? '' : ` under ${esc(state.type)}`}.${
+        raw && state.scope === 'latest' ? ' <button class="btn btn-secondary" type="button" data-goto="all">Search all history</button>' : ' Try part of a champion or skin line name.'}</p>`;
+  $('results').innerHTML = `<div class="results-head"><h2>${heading}</h2><span class="count">${pool.length.toLocaleString()} ${pool.length === 1 ? 'item' : 'items'}</span></div>${body}`;
+
+  const more = $('more'); if (more) more.onclick = () => { state.shown += PAGE; render(); };
+  const go = document.querySelector('[data-goto]'); if (go) go.onclick = () => { state.scope = 'all'; if (scopeBeforeSearch !== null) scopeBeforeSearch = 'latest'; render(); };
+  document.querySelectorAll('.card').forEach(c => c.onclick = () => showDetail(byKey.get(c.dataset.k)));
+  syncURL();
+}
+
+function flag(it) {
+  if (!it.current) return '';
+  if (it.dates.length === 1 && it.times <= 1) return '<span class="flag first">First time</span>';
+  // In the Newest drops view every card is newest, so the badge only earns its place elsewhere.
+  return state.scope === 'latest' ? '' : '<span class="flag">Newest drop</span>';
+}
+function pic(it, eager) {
+  return `<span class="pic${isSkin(it.type) ? ' cover' : ''}">${it.img
+    ? `<img src="${esc(it.img)}" alt="" ${eager ? '' : 'loading="lazy" '}decoding="async">`
+    : 'No image yet'}</span>`;
 }
 
 function card(it) {
-  const isSkin = /skin/i.test(it.type) && !/chroma/i.test(it.type);
-  const pic = it.img
-    ? `<img src="${esc(it.img)}" alt="" loading="lazy" decoding="async">`
-    : 'No image yet';
-  const dates = it.dates.length > 1
-    ? `<details><summary>All ${it.dates.length} dates</summary><ul>${it.dates.map(d => `<li>${fmt(d)}</li>`).join('')}</ul></details>`
-    : '';
-  return `<div class="card">
-    <div class="pic${isSkin ? ' cover' : ''}">${pic}</div>
-    <div class="meta">
-      <div class="name">${esc(it.name)}</div>
-      <div class="sub">${esc(it.type)} · last seen ${fmt(it.last)}</div>
-      <span class="times">Seen ${it.times}×</span>
-      ${dates}
-    </div>
-  </div>`;
+  const label = `${it.name}, ${it.type}, seen ${it.times} times, last ${fmt(it.last)}`;
+  return `<button class="card" type="button" data-k="${esc(it.key)}" aria-label="${esc(label)}" aria-haspopup="dialog">
+    ${flag(it)}${pic(it)}
+    <span class="meta">
+      <span class="name" title="${esc(it.name)}">${esc(it.name)}</span>
+      <span class="type">${esc(it.type)}</span>
+      <span class="foot"><span>${esc(it.current ? fmt(it.last, { month: 'short', day: 'numeric' }) : ago(it.last) || fmt(it.last))}</span><span class="times">${it.times}×</span></span>
+    </span>
+  </button>`;
 }
+
+let returnFocus = null;
+function showDetail(it, focusBack = true) {
+  if (!it) return;
+  returnFocus = focusBack ? document.activeElement : null;
+  const iso = it.dates.filter(isISO);
+  const gaps = iso.slice(0, -1).map((d, i) => (parseDay(d) - parseDay(iso[i + 1])) / DAY);
+  const avg = gaps.length ? Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length) : null;
+  const byYear = new Map();
+  it.dates.forEach(d => { const y = isISO(d) ? d.slice(0, 4) : 'Other'; (byYear.get(y) || byYear.set(y, []).get(y)).push(d); });
+  const since = daysSince(it.last);
+
+  $('d-body').innerHTML = `
+    <div class="m-top">
+      ${pic(it, true)}
+      <div class="m-head">
+        <h3 id="d-name">${esc(it.name)}</h3>
+        <div class="m-type">${esc(it.type)}</div>
+        <dl class="stats">
+          <div class="stat"><dt>Appearances</dt><dd>${it.times}×</dd></div>
+          <div class="stat"><dt>Last entered</dt><dd>${esc(fmt(it.last))}<small>${it.current ? `Newest ${esc(GROUPS.find(g => g.id === it.group).label.toLowerCase())} drop` : esc(ago(it.last))}</small></dd></div>
+          <div class="stat"><dt>First logged</dt><dd>${esc(fmt(it.first))}</dd></div>
+          <div class="stat"><dt>Typical gap</dt><dd>${avg != null ? `${avg} days` : '—'}<small>${avg != null ? 'between appearances' : 'needs two dates'}</small></dd></div>
+        </dl>
+      </div>
+    </div>
+    <div class="m-dates">
+      ${[...byYear].map(([y, ds]) => `<h4>${esc(y)} · ${ds.length}</h4><ul>${ds.map(d => `<li${it.current && d === it.last ? ' class="latest"' : ''}>${esc(fmt(d, { month: 'short', day: 'numeric' }))}</li>`).join('')}</ul>`).join('')}
+      ${it.times > it.dates.length ? `<p class="m-note">The sheet counts ${it.times} appearances; ${it.dates.length} ${it.dates.length === 1 ? 'is' : 'are'} in the dated log.</p>` : ''}
+    </div>`;
+  dialog.dataset.key = it.key;
+  if (!dialog.open) dialog.showModal();
+  dialog.querySelector('.m-dates').scrollTop = 0;
+  syncURL();
+}
+dialog.addEventListener('click', e => {
+  if (e.target.closest('[data-close]') || e.target === dialog) dialog.close();
+});
+dialog.addEventListener('close', () => {
+  delete dialog.dataset.key; syncURL();
+  if (returnFocus && document.contains(returnFocus)) returnFocus.focus();
+});
+const faq = $('faq');
+const openFaq = () => { if (!faq.open) faq.showModal(); if (location.hash !== '#faq') history.replaceState(null, '', location.pathname + location.search + '#faq'); };
+$('faq-open').onclick = openFaq;
+faq.addEventListener('click', e => { if (e.target.closest('[data-close]') || e.target === faq) faq.close(); });
+faq.addEventListener('close', () => {
+  history.replaceState(null, '', location.pathname + location.search);
+  $('faq-open').focus();
+});
+if (location.hash === '#faq') openFaq();
+window.addEventListener('hashchange', () => { if (location.hash === '#faq') openFaq(); });
+
+document.addEventListener('error', e => {
+  if (e.target.tagName === 'IMG' && e.target.closest('.pic')) { const p = e.target.parentNode; e.target.remove(); p.textContent = 'Image unavailable'; }
+}, true);
 </script>
 </body>
 </html>
