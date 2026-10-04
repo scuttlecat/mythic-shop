@@ -104,13 +104,13 @@
   .bar .wrap { padding-top: var(--space-4); padding-bottom: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
   .controls { display: flex; gap: var(--space-3); align-items: center; }
   .search { position: relative; flex: 1 1 auto; min-width: 0; }
-  .search svg { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--ink-muted); pointer-events: none; }
+  .search > svg { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--ink-muted); pointer-events: none; }
   .input, .select {
     min-height: 52px; font: 500 17px/24px var(--font-body); color: var(--ink);
     border: 2px solid var(--line-strong);
     transition: border-color var(--duration-quick), box-shadow var(--duration-base);
   }
-  .input { width: 100%; padding: 12px 56px 12px 50px; border-radius: var(--radius-md); background: var(--bg-sunken); }
+  .input { display: block; width: 100%; padding: 12px 56px 12px 50px; border-radius: var(--radius-md); background: var(--bg-sunken); }
   .input::placeholder { color: var(--ink-faint); }
   .input::-webkit-search-cancel-button { display: none; }
   .input:hover, .select:hover { border-color: var(--ink-muted); }
@@ -359,7 +359,7 @@
     .bar .filters, .bar .sort, .kbd { display: none; }
     .controls { gap: var(--space-2); }
     .input { min-height: 44px; font-size: 16px; padding: 10px 44px 10px 40px; }
-    .search svg { left: 14px; }
+    .search > svg { left: 14px; }
     .clear { right: 4px; }
     .filter-btn { display: grid; }
 
