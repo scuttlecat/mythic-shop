@@ -12,6 +12,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script>
   const SOURCE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQK2qBIRuj1cJa-TGyL7M_Bk3Nwm55bN5lIXbDPUWHO9nDhvaNIvT43RH6z2N8r3sV6naflAhy39Xbg/pub?gid=1449343610&single=true&output=csv';
+  const FEATURED_SOURCE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQK2qBIRuj1cJa-TGyL7M_Bk3Nwm55bN5lIXbDPUWHO9nDhvaNIvT43RH6z2N8r3sV6naflAhy39Xbg/pub?gid=1933979729&single=true&output=csv';
 </script>
 <style>
   /* ---------- Sorbet tokens ---------- */
@@ -182,7 +183,7 @@
   .active-chips { display: none; }
   .section-head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin: var(--space-8) 0 var(--space-4); }
   .dot { width: 14px; height: 14px; border-radius: var(--radius-pill); flex: none; }
-  .dot.skin { background: var(--strawberry); } .dot.chroma { background: var(--lilac); } .dot.daily { background: var(--mint); }
+  .dot.skin { background: var(--strawberry); } .dot.chroma { background: var(--lilac); } .dot.daily { background: var(--mint); } .dot.featured { background: var(--lemon); }
   h3.sec { font: 600 28px/34px var(--font-display); margin: 0; }
   .entered { color: var(--ink-muted); font-size: 14px; line-height: 20px; font-weight: 600; }
   .status { color: var(--ink-muted); }
@@ -271,14 +272,19 @@
   }
   .card:hover .pic::before { transition-duration: 400ms; }
   .pic > .ph { position: relative; z-index: 1; }
-  .pic img { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; padding: 10px; object-fit: contain; display: block; }
-  .pic.cover img { padding: 0; object-fit: cover; }
+  .pic > .glyph { position: relative; z-index: 1; width: 44%; color: var(--ink); opacity: .85; }
+  .glyph svg { display: block; width: 100%; height: auto; }
+  .pic img, .pic video { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; padding: 10px; object-fit: contain; display: block; }
+  .pic video { z-index: 2; opacity: 0; transition: opacity var(--duration-quick); }
+  .pic video.on { opacity: 1; }
+  .pic.cover img, .pic.cover video { padding: 0; object-fit: cover; }
   .flag {
     position: absolute; top: 16px; left: 16px; z-index: 1;
     padding: 3px 10px; font: 800 12px/16px var(--font-body); letter-spacing: .04em; text-transform: uppercase;
     border-radius: var(--radius-pill); color: var(--on-pastel); background: var(--lilac);
   }
   .flag.first { background: var(--mint); }
+  .flag.solo { background: var(--peach); }
   .meta { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: var(--space-3) 6px var(--space-1); }
   .name { font-weight: 700; font-size: 15px; line-height: 20px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .type { color: var(--ink-muted); font-size: 13px; line-height: 18px; font-weight: 600; }
@@ -314,6 +320,9 @@
   .m-dates li { padding: 4px 12px; border-radius: var(--radius-pill); background: var(--bg-raised); border: 2px solid var(--line); font-size: 14px; line-height: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .m-dates li.latest { background: var(--lilac); border-color: var(--lilac); color: var(--on-pastel); }
   .m-note { color: var(--ink-faint); font-size: 13px; margin: var(--space-3) 0 0; }
+  .m-dates ul.feat-list { flex-direction: column; align-items: flex-start; }
+  .m-dates .feat-list li { border-radius: var(--radius-md); font-weight: 600; color: var(--ink-muted); }
+  .feat-list li b { color: var(--ink); font-weight: 700; margin-right: var(--space-2); }
 
   dialog.faq { width: min(700px, calc(100vw - 32px)); }
   .faq-head { padding: var(--space-8) var(--space-8) var(--space-3); }
@@ -363,7 +372,8 @@
     .clear { right: 4px; }
     .filter-btn { display: grid; }
 
-    .scope-mobile { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: var(--space-4); }
+    .scope-mobile { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: var(--space-4); }
+    .scope-mobile .tab { padding: 8px 4px; }
     .results-head { margin: var(--space-4) 0 0; gap: var(--space-2); }
     h2 { font-size: 28px; line-height: 34px; }
     .count { font-size: 13px; }
@@ -459,6 +469,7 @@
       <div class="pills" role="group" aria-label="Which rotations">
         <button class="tab" type="button" data-scope="latest">Newest drops</button>
         <button class="tab" type="button" data-scope="all">All history</button>
+        <button class="tab" type="button" data-scope="featured">Featured</button>
       </div>
       <div class="chips" id="chips" role="group" aria-label="Item type"></div>
     </div>
@@ -469,6 +480,7 @@
   <div class="pills scope-mobile" role="group" aria-label="Which rotations">
     <button class="tab" type="button" data-scope="latest">Newest drops</button>
     <button class="tab" type="button" data-scope="all">All history</button>
+    <button class="tab" type="button" data-scope="featured">Featured</button>
   </div>
   <div id="results" aria-live="polite">
     <div class="loading"><div class="spinner" aria-hidden="true"></div>Loading rotations…</div>
@@ -524,7 +536,8 @@
     <details>
       <summary>Does this include the "Featured" section of the Mythic Shop?<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
       <div class="a">
-        <p><strong>No</strong>, and they don't share the same pool. The featured section is more likely to include newer releases, while the skins and chromas in the random pool are very rarely updated. There was a confirmed update of the random pool in September 2026, where we began to see prestige skin chromas from 2025 and prestige skins from 2026.</p>
+        <p><strong>Yes, separately.</strong> The <strong>Featured</strong> tab lists everything that has been in the featured section, grouped by the release Riot tied it to. Featured items never count toward the random shop numbers, and anything marked <strong>Never in random</strong> has been featured but hasn't shown up in the random shop.</p>
+        <p>They don't share the same pool. The featured section can also include Finishers and Titles, which aren't in the random pool at all. It is more likely to include newer releases, while the skins and chromas in the random pool are very rarely updated. There was a confirmed update of the random pool in September 2026, where we began to see prestige skin chromas from 2025 and prestige skins from 2026.</p>
       </div>
     </details>
     <details>
@@ -573,24 +586,61 @@ const $ = id => document.getElementById(id);
 const q = $('q'), clear = $('clear'), kbd = $('kbd'), sortSel = $('sort'), dialog = $('detail'), filtersDlg = $('filters');
 const params = new URLSearchParams(location.search);
 let items = [], byKey = new Map(), latest = '', rotations = 0;
+let featured = null; // featured batches, newest first; null if the featured tab didn't load
 let state = {
-  scope: params.get('scope') === 'all' ? 'all' : 'latest',
+  scope: ['all', 'featured'].includes(params.get('scope')) ? params.get('scope') : 'latest',
   type: params.get('type') || 'All',
   sort: params.get('sort') || 'recent',
   shown: PAGE,
 };
 let scopeBeforeSearch = null;
 
-Papa.parse(SOURCE, {
+// The featured tab is optional: if it fails, the random log still renders and only the Featured view says so.
+const load = url => new Promise(resolve => Papa.parse(url, {
   download: true, header: true, skipEmptyLines: true,
-  complete: ({ data }) => build(data),
-  error: () => {
-    $('lede').textContent = 'The rotation log didn’t load.';
-    $('results').innerHTML = `<div class="alert" role="alert"><span class="alert-icon" aria-hidden="true">!</span><div><b>Oops — the rotation data didn’t load</b>Check that the “Rotations Matched” tab is published to the web as CSV and that SOURCE points to it, then reload.</div></div>`;
-  },
+  complete: ({ data }) => resolve(data), error: () => resolve(null),
+}));
+Promise.all([load(SOURCE), load(FEATURED_SOURCE)]).then(([rows, featRows]) => {
+  if (rows) return build(rows, featRows);
+  $('lede').textContent = 'The rotation log didn’t load.';
+  $('results').innerHTML = `<div class="alert" role="alert"><span class="alert-icon" aria-hidden="true">!</span><div><b>Oops — the rotation data didn’t load</b>Check that the “Rotations Matched” tab is published to the web as CSV and that SOURCE points to it, then reload.</div></div>`;
 });
 
-function build(rows) {
+// The sheet writes featured dates like "October 7, 2026"; everything else here works in ISO days.
+const toISO = s => {
+  s = (s || '').trim();
+  if (!s || isISO(s)) return s;
+  const d = new Date(s);
+  return isNaN(d) ? s : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+// Riot picks the featured slot, so it stays apart from the random log: it never counts toward
+// appearances or "newest", and only an exact name + type match links an item to its random history.
+function addFeatured(rows) {
+  const batches = new Map();
+  rows.forEach(r => {
+    if (!r.Name) return;
+    const type = (r.Type || '').trim();
+    const k = norm(r.Name) + '|' + type;
+    let it = byKey.get(k);
+    if (!it) {
+      it = { key: k, name: r.Name, type, img: '', dates: [], times: 0, last: '', first: '', s: norm(r.Name), group: groupOf(type), current: false, featuredOnly: true };
+      items.push(it); byKey.set(k, it);
+    }
+    const date = toISO(r['Start Date']), reason = (r.Reason || '').trim();
+    (it.featured ||= []).push({ date, reason });
+    if (r['Image URL']) it.img = r['Image URL'];
+    if (r['Video URL']) it.video = r['Video URL'];
+    const bk = date + '|' + reason;
+    let b = batches.get(bk);
+    if (!b) batches.set(bk, b = { date, reason, items: [] });
+    if (!b.items.includes(it)) b.items.push(it);
+  });
+  items.forEach(it => it.featured?.sort((a, b) => b.date.localeCompare(a.date)));
+  featured = [...batches.values()].sort((a, b) => b.date.localeCompare(a.date) || !a.reason - !b.reason || a.reason.localeCompare(b.reason));
+}
+
+function build(rows, featRows) {
   const map = new Map();
   rows.forEach(r => {
     if (!r.Name) return;
@@ -618,17 +668,18 @@ function build(rows) {
   }
   rotations = new Set(rows.map(r => r.Date).filter(Boolean)).size;
   $('lede').innerHTML = `<b>${items.length.toLocaleString()}</b> unique items logged across <b>${rotations}</b> shop updates. Updated <b>${esc(fmt(latest))}</b>.`;
+  if (featRows) addFeatured(featRows);
 
   q.value = params.get('q') || '';
-  if (q.value) { scopeBeforeSearch = state.scope; state.scope = params.get('scope') === 'latest' ? 'latest' : 'all'; }
+  if (q.value && state.scope !== 'featured') { scopeBeforeSearch = state.scope; state.scope = params.get('scope') === 'latest' ? 'latest' : 'all'; }
   if (!SORTS.some(s => s[0] === state.sort)) state.sort = 'recent';
   sortSel.value = state.sort;
   syncClear();
 
   let t;
   q.addEventListener('input', () => {
-    // Searching means "find it anywhere in the log"; clearing the box puts the view back.
-    if (q.value.trim() && scopeBeforeSearch === null) { scopeBeforeSearch = state.scope; state.scope = 'all'; }
+    // Searching newest drops means "find it anywhere in the log"; clearing the box puts the view back.
+    if (q.value.trim() && scopeBeforeSearch === null && state.scope === 'latest') { scopeBeforeSearch = state.scope; state.scope = 'all'; }
     if (!q.value.trim() && scopeBeforeSearch !== null) { state.scope = scopeBeforeSearch; scopeBeforeSearch = null; }
     syncClear(); state.shown = PAGE; clearTimeout(t); t = setTimeout(render, 120);
   });
@@ -663,7 +714,7 @@ function syncURL() {
   const url = new URL(location);
   const set = (k, v, dflt) => v && v !== dflt ? url.searchParams.set(k, v) : url.searchParams.delete(k);
   set('q', q.value.trim(), '');
-  set('scope', q.value.trim() ? (state.scope === 'latest' ? 'latest' : '') : state.scope, q.value.trim() ? '' : 'latest');
+  set('scope', state.scope, q.value.trim() ? 'all' : 'latest');
   set('type', state.type, 'All');
   set('sort', state.sort, 'recent');
   set('item', dialog.open ? dialog.dataset.key : '', '');
@@ -673,19 +724,23 @@ function syncURL() {
 const sorters = {
   recent: (a, b) => b.last.localeCompare(a.last) || a.name.localeCompare(b.name),
   times: (a, b) => b.times - a.times || b.last.localeCompare(a.last) || a.name.localeCompare(b.name),
-  absent: (a, b) => a.last.localeCompare(b.last) || a.name.localeCompare(b.name),
+  // Featured-only items were never seen at all, so they sink below the longest-absent ones.
+  absent: (a, b) => !a.last - !b.last || a.last.localeCompare(b.last) || a.name.localeCompare(b.name),
   name: (a, b) => a.name.localeCompare(b.name),
 };
 
 function render() {
   const raw = q.value.trim();
   const terms = norm(raw).split(/\s+/).filter(Boolean);
-  const inScope = state.scope === 'latest' ? items.filter(it => it.current) : items;
+  const inScope = state.scope === 'latest' ? items.filter(it => it.current)
+    : state.scope === 'featured' ? items.filter(it => it.featured)
+    : items;
   const matches = terms.length ? inScope.filter(it => terms.every(t => it.s.includes(t))) : inScope;
 
   document.querySelectorAll('[data-scope]').forEach(b => b.setAttribute('aria-pressed', b.dataset.scope === state.scope));
 
-  const types = [...new Set(items.map(it => it.type))].sort();
+  // Featured-only types (Finishers, Titles) can't be a newest drop, so they only get chips where they can appear.
+  const types = [...new Set((state.scope === 'latest' ? items.filter(it => !it.featuredOnly) : items).map(it => it.type))].filter(Boolean).sort();
   if (state.type !== 'All' && !types.includes(state.type)) state.type = 'All';
   const counts = {}; matches.forEach(it => counts[it.type] = (counts[it.type] || 0) + 1);
   const chipsHTML = ['All', ...types].map(ty => {
@@ -713,44 +768,82 @@ function render() {
   $('show-n').textContent = `Show ${pool.length.toLocaleString()} ${pool.length === 1 ? 'item' : 'items'}`;
 
   const typeLabel = state.type === 'All' ? '' : ` · ${esc(state.type)}`;
-  const heading = raw ? `Results for “${esc(raw)}”${typeLabel}`
+  const heading = raw ? `Results for “${esc(raw)}”${state.scope === 'featured' ? ' in featured' : ''}${typeLabel}`
     : state.scope === 'latest' ? `Newest drops${typeLabel}`
+    : state.scope === 'featured' ? `Featured${typeLabel}`
     : `All history${typeLabel}`;
-  const scopeNote = raw && state.scope === 'latest' ? ' in the newest drops' : '';
-  const shown = state.scope === 'latest' ? pool : pool.slice(0, state.shown);
+  const scopeNote = !raw ? '' : state.scope === 'latest' ? ' in the newest drops' : state.scope === 'featured' ? ' in featured' : '';
+  const shown = state.scope === 'all' ? pool.slice(0, state.shown) : pool;
+  // Featured is split into the batches Riot ran, newest first. The sheet's order is kept unless a sort is picked.
+  const inPool = new Set(pool);
+  const featuredGrid = () => featured.map(b => {
+    const its = state.sort === 'recent' ? b.items.filter(it => inPool.has(it)) : pool.filter(it => b.items.includes(it));
+    return its.length ? `<div class="section-head"><span class="dot featured" aria-hidden="true"></span><h3 class="sec">${esc(b.reason || 'Featured')}</h3><span class="entered">${b.date ? `featured ${esc(fmt(b.date))}` : 'date not logged yet'}</span></div><div class="grid">${its.map(it => card(it, b)).join('')}</div>` : '';
+  }).join('');
   // Newest drops are split by shop slot, since each slot refreshed on its own date.
-  const grid = state.scope === 'latest'
+  const grid = state.scope === 'featured' ? (featured ? featuredGrid() : '')
+    : state.scope === 'latest'
     ? GROUPS.map(g => {
         const its = shown.filter(it => it.group === g.id);
-        return its.length ? `<div class="section-head"><span class="dot ${g.id}" aria-hidden="true"></span><h3 class="sec">${esc(g.label)}</h3><span class="entered">entered ${esc(fmt(latestBy[g.id], { month: 'short', day: 'numeric' }))}</span></div><div class="grid">${its.map(card).join('')}</div>` : '';
+        return its.length ? `<div class="section-head"><span class="dot ${g.id}" aria-hidden="true"></span><h3 class="sec">${esc(g.label)}</h3><span class="entered">entered ${esc(fmt(latestBy[g.id], { month: 'short', day: 'numeric' }))}</span></div><div class="grid">${its.map(it => card(it)).join('')}</div>` : '';
       }).join('')
-    : `<div class="grid" style="margin-top:24px">${shown.map(card).join('')}</div>`;
-  const body = pool.length
+    : `<div class="grid" style="margin-top:24px">${shown.map(it => card(it)).join('')}</div>`;
+  const body = state.scope === 'featured' && !featured
+    ? `<div class="alert" role="alert"><span class="alert-icon" aria-hidden="true">!</span><div><b>The featured data didn’t load</b>Check that the featured tab is published to the web as CSV and that FEATURED_SOURCE points to it, then reload.</div></div>`
+    : pool.length
     ? grid +
       (pool.length > shown.length ? `<div class="more"><button class="btn press" type="button" id="more">Show ${Math.min(PAGE, pool.length - shown.length)} more <span class="count">(${shown.length} of ${pool.length})</span></button></div>` : '')
     : `<div class="empty"><p class="big">Nothing${scopeNote} matches${raw ? ` “${esc(raw)}”` : ''}${state.type === 'All' ? '' : ` under ${esc(state.type)}`} — yet.</p><p class="status">${
         raw && state.scope === 'latest' ? '</p><button class="btn press" type="button" data-goto="all">Search all history</button>' : 'Try part of a champion or skin line name.</p>'}</div>`;
+  unwatchVideos($('results'));
   $('results').innerHTML = `<div class="results-head"><h2>${heading}</h2><span class="count">${pool.length.toLocaleString()} ${pool.length === 1 ? 'item' : 'items'}</span></div><div class="active-chips">${active.join('')}</div>${body}`;
 
   const more = $('more'); if (more) more.onclick = () => { state.shown += PAGE; render(); };
   const go = document.querySelector('[data-goto]'); if (go) go.onclick = () => { state.scope = 'all'; if (scopeBeforeSearch !== null) scopeBeforeSearch = 'latest'; render(); };
   document.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => b.dataset.rm === 'type' ? setType('All') : setSort('recent'));
   document.querySelectorAll('.card').forEach(c => c.onclick = () => showDetail(byKey.get(c.dataset.k)));
+  watchVideos($('results'));
   syncURL();
 }
 
 function flag(it) {
-  if (!it.current) return '';
+  if (it.featuredOnly) return '<span class="flag solo">Never in random</span>';
+  if (!it.current || state.scope === 'featured') return '';
   if (it.dates.length === 1 && it.times <= 1) return '<span class="flag first">First time</span>';
   // In the Newest drops view every card is newest, so the badge only earns its place elsewhere.
   return state.scope === 'latest' ? '' : '<span class="flag">Newest drop</span>';
 }
 // A stable per-item offset so the lava blobs across the grid aren't all in step.
 const phase = s => { let h = 0; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) | 0; return -(Math.abs(h) % 140) / 10; };
+// Placeholder art for featured-only types CommunityDragon has no images for.
+const GLYPHS = {
+  finisher: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M14.5 6.5 18 3h3v3l-3.5 3.5M5 14l4 4M7 17l-3 3M3 19l2 2"/></svg>',
+  title: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8h20l-2.5 4L22 16H2l2.5-4z"/><path d="M8 12h8"/></svg>',
+};
+const glyphFor = t => /finisher/i.test(t) ? GLYPHS.finisher : /title/i.test(t) ? GLYPHS.title : '';
+// Finisher videos sit over the still image and only fade in once they're actually playing.
+// They're ~1 MB each, so nothing downloads until the card scrolls into view, and they pause off-screen.
+const motionOK = matchMedia('(prefers-reduced-motion: no-preference)');
+const videoWatch = new IntersectionObserver(entries => entries.forEach(({ target: v, isIntersecting }) => {
+  if (!isIntersecting) { v.pause(); return; }
+  if (!v.src) v.src = v.dataset.src;
+  v.play().catch(() => {});
+}), { threshold: 0.25 });
+function watchVideos(root) {
+  root.querySelectorAll('.pic video').forEach(v => {
+    v.addEventListener('playing', () => v.classList.add('on'));
+    v.addEventListener('error', () => v.remove());
+    videoWatch.observe(v);
+  });
+}
+const unwatchVideos = root => root.querySelectorAll('.pic video').forEach(v => videoWatch.unobserve(v));
 function pic(it, eager) {
-  return `<span class="pic ${it.group}${isSkin(it.type) ? ' cover' : ''}" style="--d:${phase(it.key)}s">${it.img
+  const glyph = glyphFor(it.type);
+  const video = it.video && motionOK.matches ? `<video data-src="${esc(it.video)}" muted loop playsinline preload="none" aria-hidden="true"></video>` : '';
+  return `<span class="pic ${it.group}${isSkin(it.type) || /finisher/i.test(it.type) ? ' cover' : ''}" style="--d:${phase(it.key)}s">${it.img
     ? `<img src="${esc(it.img)}" alt="" ${eager ? '' : 'loading="lazy" '}decoding="async">`
-    : '<span class="ph">No image yet</span>'}</span>`;
+    : glyph ? `<span class="glyph">${glyph}</span>`
+    : '<span class="ph">No image yet</span>'}${video}</span>`;
 }
 // Hovering a card pulls its lava toward the cursor; leaving lets it spring back.
 const results = $('results');
@@ -767,14 +860,19 @@ if (matchMedia('(hover: hover) and (prefers-reduced-motion: no-preference)').mat
   });
 }
 
-function card(it) {
-  const label = `${it.name}, ${it.type}, seen ${it.times} times, last ${fmt(it.last)}`;
+// In the Featured view a card belongs to one batch, so its footer shows that batch's date.
+function card(it, batch) {
+  const featDate = batch ? batch.date : it.featuredOnly ? it.featured[0].date : '';
+  const random = it.featuredOnly ? 'never in the random shop' : `seen ${it.times} times, last ${fmt(it.last)}`;
+  const label = `${it.name}, ${it.type || 'type not set'}, ${batch ? `featured ${fmt(featDate) || 'date not logged'}, ` : ''}${random}`;
+  const when = batch || it.featuredOnly ? (featDate ? `Featured ${fmt(featDate, { month: 'short', day: 'numeric' })}` : 'Featured')
+    : it.current ? fmt(it.last, { month: 'short', day: 'numeric' }) : ago(it.last) || fmt(it.last);
   return `<button class="card" type="button" data-k="${esc(it.key)}" aria-label="${esc(label)}" aria-haspopup="dialog">
     ${flag(it)}${pic(it)}
     <span class="meta">
       <span class="name" title="${esc(it.name)}">${esc(it.name)}</span>
-      <span class="type">${esc(it.type)}</span>
-      <span class="foot"><span>${esc(it.current ? fmt(it.last, { month: 'short', day: 'numeric' }) : ago(it.last) || fmt(it.last))}</span><span class="times">${it.times}×</span></span>
+      <span class="type">${esc(it.type || 'Type not set')}</span>
+      <span class="foot"><span>${esc(when)}</span>${it.times ? `<span class="times">${it.times}×</span>` : ''}</span>
     </span>
   </button>`;
 }
@@ -789,19 +887,29 @@ function showDetail(it, focusBack = true) {
   const byYear = new Map();
   it.dates.forEach(d => { const y = isISO(d) ? d.slice(0, 4) : 'Other'; (byYear.get(y) || byYear.set(y, []).get(y)).push(d); });
 
-  const stats = `<dl class="stats">
+  const feats = it.featured || [];
+  const featHTML = feats.length ? `<h4>Featured · ${feats.length}</h4><ul class="feat-list">${feats.map(f =>
+    `<li><b>${esc(f.date ? fmt(f.date) : 'Date not logged')}</b>${esc(f.reason)}</li>`).join('')}</ul>` : '';
+
+  const stats = it.featuredOnly ? `<dl class="stats">
+          <div class="stat"><dt>Random shop</dt><dd>Never<small>not in the random log</small></dd></div>
+          <div class="stat"><dt>Times featured</dt><dd>${feats.length}×</dd></div>
+          <div class="stat"><dt>Last featured</dt><dd>${esc(fmt(feats[0].date) || '—')}</dd></div>
+          <div class="stat"><dt>First featured</dt><dd>${esc(fmt(feats.at(-1).date) || '—')}</dd></div>
+        </dl>` : `<dl class="stats">
           <div class="stat"><dt>Appearances</dt><dd>${it.times}×</dd></div>
           <div class="stat"><dt>Last entered</dt><dd>${esc(fmt(it.last))}<small>${it.current ? `Newest ${esc(GROUPS.find(g => g.id === it.group).label.toLowerCase())} drop` : esc(ago(it.last))}</small></dd></div>
           <div class="stat"><dt>First logged</dt><dd>${esc(fmt(it.first))}</dd></div>
           <div class="stat"><dt>Typical gap</dt><dd>${avg != null ? `${avg} days` : '—'}<small>${avg != null ? 'between appearances' : 'needs two dates'}</small></dd></div>
         </dl>`;
   // The stats sit beside the art on desktop and drop under it on phones.
+  unwatchVideos($('d-body'));
   $('d-body').innerHTML = `
     <div class="m-top">
       ${pic(it, true)}
       <div class="m-head">
         <h3 id="d-name">${esc(it.name)}</h3>
-        <div class="m-type">${esc(it.type)}</div>
+        <div class="m-type">${esc(it.type || 'Type not set')}</div>
         ${stats}
       </div>
       ${stats}
@@ -809,10 +917,12 @@ function showDetail(it, focusBack = true) {
     <div class="m-dates">
       ${[...byYear].map(([y, ds]) => `<h4>${esc(y)} · ${ds.length}</h4><ul>${ds.map(d => `<li${it.current && d === it.last ? ' class="latest"' : ''}>${esc(fmt(d, { month: 'short', day: 'numeric' }))}</li>`).join('')}</ul>`).join('')}
       ${it.times > it.dates.length ? `<p class="m-note">The sheet counts ${it.times} appearances; ${it.dates.length} ${it.dates.length === 1 ? 'is' : 'are'} in the dated log.</p>` : ''}
+      ${featHTML}
     </div>`;
   dialog.dataset.key = it.key;
   if (!dialog.open) dialog.showModal();
   dialog.querySelector('.m-dates').scrollTop = 0;
+  watchVideos($('d-body'));
   syncURL();
 }
 dialog.addEventListener('click', e => {
@@ -838,7 +948,7 @@ window.addEventListener('hashchange', () => { if (location.hash === '#faq') open
 matchMedia('(min-width: 641px)').addEventListener('change', e => { if (e.matches && filtersDlg.open) filtersDlg.close(); });
 
 document.addEventListener('error', e => {
-  if (e.target.tagName === 'IMG' && e.target.closest('.pic')) { const p = e.target.parentNode; e.target.remove(); p.innerHTML = '<span class="ph">Image unavailable</span>'; }
+  if (e.target.tagName === 'IMG' && e.target.closest('.pic')) { const ph = document.createElement('span'); ph.className = 'ph'; ph.textContent = 'Image unavailable'; e.target.replaceWith(ph); }
 }, true);
 </script>
 </body>
